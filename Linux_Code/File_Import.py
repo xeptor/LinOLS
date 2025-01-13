@@ -32,34 +32,39 @@ class FileImport:
             else:
                 self.ui.new_values = struct.unpack('>' + 'H' * (len(content) // 2), content)
 
-    def import_file(self, ui):
+    def import_file(self, ui, shortcut, path):
         self.ui = ui
-        result = subprocess.run(['zenity', '--file-selection'], capture_output=True, text=True)
+        if not shortcut:
+            result = subprocess.run(['zenity', '--file-selection'], capture_output=True, text=True)
 
-        if not self.ui.import_allow:
-            messagebox.showerror("Error", "You cannot import a file if there is none open.")
-            return
+            if not self.ui.import_allow:
+                messagebox.showerror("Error", "You cannot import a file if there is none open.")
+                return
 
-        if result.returncode == 0:
-            file_path = result.stdout.strip()
-            with open(file_path, 'rb') as file:
-                content = file.read()
-                if self.ui.low_high:
-                    self.ui.imported_values = struct.unpack('<' + 'H' * (len(content) // 2), content)
-                else:
-                    self.ui.imported_values = struct.unpack('>' + 'H' * (len(content) // 2), content)
-                self.ui.text_widget.delete(1.0, END)
-                rows = [self.ui.imported_values[i:i + self.ui.columns] for i in range(0, len(self.ui.imported_values), self.ui.columns)]
-                for row in rows:
-                    formatted = ' '.join(f"{value:05}" for value in row)
-                    self.ui.text_widget.insert(END, formatted + '\n')
-                from maps import Maps_Utility
-                maps = Maps_Utility(self.ui)
-                maps.reapply_highlight_text()
-                from Utilities import Utility
-                self.utility = Utility(self)
-                self.utility.check_difference_values(self.ui.imported_values, True, self.ui)
-                from Module_2D import Mode2D
-                self.mode_2d = Mode2D(self)
-                self.ui.return_text = True
-                self.mode_2d.update_2d(ui)
+            if result.returncode == 0:
+                file_path = result.stdout.strip()
+            else:
+                return
+        else:
+            file_path = path
+        with open(file_path, 'rb') as file:
+            content = file.read()
+            if self.ui.low_high:
+                self.ui.imported_values = struct.unpack('<' + 'H' * (len(content) // 2), content)
+            else:
+                self.ui.imported_values = struct.unpack('>' + 'H' * (len(content) // 2), content)
+            self.ui.text_widget.delete(1.0, END)
+            rows = [self.ui.imported_values[i:i + self.ui.columns] for i in range(0, len(self.ui.imported_values), self.ui.columns)]
+            for row in rows:
+                formatted = ' '.join(f"{value:05}" for value in row)
+                self.ui.text_widget.insert(END, formatted + '\n')
+            from maps import Maps_Utility
+            maps = Maps_Utility(self.ui)
+            maps.reapply_highlight_text()
+            from Utilities import Utility
+            self.utility = Utility(self)
+            self.utility.check_difference_values(self.ui.imported_values, True, self.ui)
+            from Module_2D import Mode2D
+            self.mode_2d = Mode2D(self)
+            self.ui.return_text = True
+            self.mode_2d.update_2d(ui)

@@ -1,6 +1,7 @@
 from tkinter import *
 import struct
 from tkinter import messagebox, filedialog
+import os
 
 class FileImport:
     def __init__(self, ui):
@@ -15,7 +16,9 @@ class FileImport:
         new_values = self.ui.current_values[self.ui.shift_count:]
         self.ui.current_values = new_values
 
-        self.ui.new_path = "temp.bin"
+        documents_path = os.path.expanduser("~/Documents")
+
+        self.ui.new_path = os.path.join(documents_path, "temp.bin")
 
         if self.ui.low_high:
             content_to_write = b''.join(struct.pack('<H', int(value)) for value in self.ui.current_values)
@@ -31,14 +34,16 @@ class FileImport:
             else:
                 self.ui.new_values = struct.unpack('>' + 'H' * (len(content) // 2), content)
 
-    def import_file(self, ui):
+    def import_file(self, ui, shortcut, path):
         self.ui = ui
-        file_path = filedialog.askopenfilename()
+        if not shortcut:
+            file_path = filedialog.askopenfilename()
 
-        if not self.ui.import_allow:
-            messagebox.showerror("Error", "You cannot import a file if there is none open.")
-            return
-
+            if not self.ui.import_allow:
+                messagebox.showerror("Error", "You cannot import a file if there is none open.")
+                return
+        else:
+            file_path = path
         with open(file_path, 'rb') as file:
             content = file.read()
             if self.ui.low_high:

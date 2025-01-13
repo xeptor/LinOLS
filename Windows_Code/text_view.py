@@ -33,6 +33,9 @@ class TextView:
                     self.ui.total_rows += 1
                 self.ui.differences = []
                 self.ui.ori_values = []
+                self.ui.clean_up()
+                self.ui.map_list.delete(0, END)
+                self.ui.map_list_counter = 0
                 self.show_all_data()
                 from Module_2D import Mode2D
                 self.mode2d = Mode2D(self)
@@ -65,6 +68,7 @@ class TextView:
         if not self.ui.file_path:
             messagebox.showwarning("Warning", "No file is currently open. Please open a file first.")
             return
+
         self.ui.current_values = self.ui.text_widget.get(1.0, END).split()
         new_values = self.ui.current_values[self.ui.shift_count:]
         self.ui.current_values = new_values
@@ -80,8 +84,7 @@ class TextView:
             file_name = f"LinOLS_{manufacturer}_{model}_{modification}.bin"
 
         try:
-            initial_dir = os.path.expanduser('~')
-            file_path = filedialog.asksaveasfilename()
+            file_path = filedialog.asksaveasfilename(defaultextension=".bin", initialfile=file_name)
 
             if not file_path:
                 messagebox.showinfo("Info", "File save canceled.")
@@ -91,6 +94,7 @@ class TextView:
                 content_to_write = b''.join(struct.pack('<H', int(value)) for value in self.ui.current_values)
             else:
                 content_to_write = b''.join(struct.pack('>H', int(value)) for value in self.ui.current_values)
+
             with open(file_path, 'wb') as file:
                 file.write(content_to_write)
 

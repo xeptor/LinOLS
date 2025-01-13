@@ -19,7 +19,7 @@ And then you just run it with `./LinOLS`.
 Important: If you install the executable only thing you need to download is `zenity`, if you don't have it already.
 
 ## How to run LinOLS on Windows
-You can download an `setup file` for Window in map called `Windows_Setup` in this repository. 
+You can download an `setup file` for Window 10/11 64bit in map called `Windows_Setup` in this repository. 
 
 ## Donations
 You can donate here: `https://www.paypal.com/donate?hosted_button_id=HEKSD48J386MJ`
@@ -99,7 +99,7 @@ You can donate here: `https://www.paypal.com/donate?hosted_button_id=HEKSD48J386
   ```
 ## Desktop Shortcut
   If you want you can use a provided template desktop shortcut named: `LinOLS.desktop`.
-  
+  New update
   You can also find an icon named: `icon.png`.
 
   Only thing you need to edit is `Exec` and `Icon`.
@@ -108,9 +108,17 @@ You can donate here: `https://www.paypal.com/donate?hosted_button_id=HEKSD48J386
   ### Text Tab
   You can select multiple numbers with holding the `left click` and then draging with your mouse. You can only drag from up to down.
 
+  You can select one value and right click on text widget to copy value's hex address.
+  
+  You can use 'm'/'M' to increase number of columns by one or use 'w'/'W' to decrease the columns by one.
+  
+  You can use 'Page Up' and 'Page Down' for faster navigation.
+
   `16-bit Lo-Hi and 16-Bit Hi-Lo` are for chaning the byte order and changing the mode will ERASE any changes done.
 
   `Selected: #` button is for showing you how many numbers do you have selected currently
+
+  `Ori: #` buttion is for showing the original value of the selected value.
 
   `Columns box` is used for changing the number of columns.
 
@@ -128,6 +136,8 @@ You can donate here: `https://www.paypal.com/donate?hosted_button_id=HEKSD48J386
 
   ### 2D Tab
   You can select a number on 2d canva and you will automaticly show you that number in text mode.
+  
+  You can use 'Page Up' and 'Page Down' for faster navigation.
   
   `<` move one frame to the left.
   
@@ -149,8 +159,12 @@ You can donate here: `https://www.paypal.com/donate?hosted_button_id=HEKSD48J386
   To select the values hold left click and drag over the values you want to select (doesn't work on axis).
 
   To rotate 3D plot hold left click and drag it around.
+  
+  You can right click on both axis and any map value to change the axis's/map's properties.
 
   Every copy and paste buttons are meant for interection with programs like `Excel` and `Libre Calc`
+
+  `Sign` is used to sign values in 3d plot view.
 
   `Copy Map` copy the values of the map without axis to clipboard.
 
@@ -160,19 +174,21 @@ You can donate here: `https://www.paypal.com/donate?hosted_button_id=HEKSD48J386
 
   `Copy Y Axis` is used to copy whole Y axis to clipboard.
 
-  `Difference: 0` Shows what is the change on the selected value.
+  `Update` is used to update values from text view to 3d view.
+
+  `Diff: 0` Shows what is the change on the selected value.
 
   `Row and column boxes` are used to show current rows and columns in 3d view.
 
-  `Update` is used to update values from text view to 3d view.
+  `Value` is used to change selected value quickly.
 
-  `Value Dialog` is used to change selected value quickly.
+  `Write Map` is used to transfer values from 3d grid to text view, so update them.
 
   `Paste X Axis` is used to paste whole X axis to 3d grid.
 
   `Paste Y Axis` is used to paste whole Y axis to 3d grid.
 
-  `Write Map` is used to transfer values from 3d grid to text view, so update them.
+  `Paste Selected` is used to paste values from clipboard to the location of the starting value / ONE selected value.
 
   `Paste` is used to paste the map to 3d grid, excluding both axis.
 
@@ -195,12 +211,22 @@ You can donate here: `https://www.paypal.com/donate?hosted_button_id=HEKSD48J386
 
   `Value Changes` is used to change multiple numbers at once.
 
+  `Find Hex Address` is used to find your hex address in opened file.
+
   ### Mappack Menu
   `Import Mappack` is used to import mappack / `.mp` files.
 
   `Export Mappack` is used to export mappack / `.mp` files.  
 
   ### Shortcuts
-  Edit mode - E
+  Edit mode - `E`
+
+  Skip to the next changed value in 2d mode - `n` or `N`
   
+  Ship to the previous changed value in 2d mode - `v` or `V`
+
   Value Dialog - Shift + 5 (Can be accessible via Options menu)
+
+  `Ctrl+V` on Text view for opening files fast
+
+  `Ctrl+I` on Text view for importing files fast

@@ -1,7 +1,7 @@
-from tkinter import Tk
+from customtkinter import CTk
 from ui import LinOLS
 
 if __name__ == "__main__":
-    window = Tk(className='LinOLS')
+    window = CTk()
     app = LinOLS(window)
     window.mainloop()

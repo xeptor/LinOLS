@@ -1,7 +1,6 @@
 from tkinter import *
 from tkinter import messagebox
 
-
 class ValueDialog:
     def __init__(self, ui):
         self.ui = ui
@@ -9,6 +8,8 @@ class ValueDialog:
     def value_dialog(self, ui, event=None):
         self.ui = ui
         self.value_dialog_window = Toplevel(bg="#333")
+
+        self.value_dialog_window.resizable(False, False)
 
         screen_width = self.ui.window.winfo_screenwidth()
         screen_height = self.ui.window.winfo_screenheight()
@@ -34,18 +35,20 @@ class ValueDialog:
         self.new_text = ""
 
         self.entry = Entry(self.value_dialog_window, bg="#555", fg="white", highlightthickness=0, font=('Arial', 11))
-        self.entry.grid(row=0, column=0, columnspan=3, padx=40, pady=10)
+        self.entry.grid(row=0, column=0, columnspan=4, padx=40, pady=10)
 
         button1 = Button(self.value_dialog_window, text="=", font=('Arial', 11), bg="#444", highlightthickness=0, fg="white", command=lambda: self.change_value("="))
         button2 = Button(self.value_dialog_window, text="+", font=('Arial', 11), bg="#444", highlightthickness=0, fg="white", command=lambda: self.change_value("+"))
-        button3 = Button(self.value_dialog_window, text="%", font=('Arial', 11), bg="#444", highlightthickness=0, fg="white", command=lambda: self.change_value("%"))
+        button3 = Button(self.value_dialog_window, text="-", font=('Arial', 11), bg="#444", highlightthickness=0, fg="white", command=lambda: self.change_value("-"))
+        button4 = Button(self.value_dialog_window, text="%", font=('Arial', 11), bg="#444", highlightthickness=0, fg="white", command=lambda: self.change_value("%"))
 
-        button1.grid(row=1, column=0, padx=10, pady=5)
-        button2.grid(row=1, column=1, padx=10, pady=5)
-        button3.grid(row=1, column=2, padx=10, pady=5)
+        button1.grid(row=1, column=0, padx=5, pady=5)
+        button2.grid(row=1, column=1, padx=5, pady=5)
+        button3.grid(row=1, column=2, padx=5, pady=5)
+        button4.grid(row=1, column=3, padx=5, pady=5)
 
         ok_button = Button(self.value_dialog_window, text="Ok", command= lambda: self.calculate(self.ui), font=('Arial', 11), bg="#444", highlightthickness=0, fg="white", width=6)
-        ok_button.grid(row=2, column=0, columnspan=3, pady=10)
+        ok_button.grid(row=2, column=0, columnspan=4, pady=10)
         self.entry.focus_set()
 
         return "break"
@@ -81,11 +84,14 @@ class ValueDialog:
                     new_value = int(self.entry.get())
                 elif self.selected_value == "+":
                     new_value = (int(item) + int(self.entry.get()))
+                elif self.selected_value == "-":
+                    new_value = (int(item) + (int(self.entry.get())) * -1)
                 elif self.selected_value == "%":
                     percentage = int(item) * (float(self.entry.get()) / 100)
                     new_value = int(item) + percentage
                 else:
                     messagebox.showerror("Select Operator!", "Please select an operator!")
+                    return
 
                 if not float(new_value) <= 65535 or not float(new_value) >= 0:
                     messagebox.showerror("Invalid Number!", "You have entered an invalid number!")

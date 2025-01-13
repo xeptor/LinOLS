@@ -5,7 +5,9 @@ from tkinter import messagebox, filedialog
 class Maps_Utility:
     def __init__(self, ui):
         self.ui = ui
-        self.file_path = "mappack.mp"
+        documents_path = os.path.expanduser("~/Documents")
+
+        self.file_path = os.path.join(documents_path, "mappack.mp")
         self.map_data = []
         self.x_axis = []
         self.y_axis = []
@@ -123,7 +125,13 @@ class Maps_Utility:
             file.write(f"\n{self.map_name}\n" if self.ui.map_list_counter > 0 else f"{self.map_name}\n")
             file.write(f"{self.start_index}\n")
             file.write(f"{self.end_index}\n")
-            file.write(f"{self.size}")
+            file.write(f"{self.size}\n")
+            file.write(f"{1.0}\n")
+            file.write(f"{0}\n")
+            file.write(f"{1.0}\n")
+            file.write(f"{0}\n")
+            file.write(f"{1.0}\n")
+            file.write(f"{0}")
 
     def on_double_click(self, event):
         selection = self.ui.map_list.curselection()
@@ -133,46 +141,54 @@ class Maps_Utility:
         index = selection[0]
         self.last_map_index = index
         self.update_3d_from_text()
+        self.ui.notebook.select(2)
 
     def update_3d_from_text(self):
         item = self.ui.map_list.get(self.last_map_index)
+
+        if not os.path.exists(self.file_path):
+            return
+
         with open(self.file_path, 'r') as file:
-            content = file.read().split("\n")
-            for i in range(len(content)):
-                if content[i] == item:
-                    start_index = int(content[i + 1])
-                    end_index = int(content[i + 2])
-                    size = content[i + 3]
+            content = file.readlines()
+            item_index = -1
 
-                    parts = size.split('x')
-                    self.col = int(parts[0])
-                    self.row = int(parts[1])
-
-                    from Module_3D import Mode3D
-                    mode3d = Mode3D(self.ui)
-
-                    self.map_data = self.ui.unpacked[start_index:end_index]
-                    mode3d.paste_data(True, self.map_data, self.row, self.col, False)
-                    if not (start_index - (self.col + self.row) < 0):
-                        self.x_axis = self.ui.unpacked[start_index - self.col:start_index]
-                        self.y_axis = self.ui.unpacked[start_index - (self.col + self.row):start_index - self.col]
-                        mode3d.paste_x_data(True, self.x_axis, False)
-                        mode3d.paste_y_data(True, self.y_axis, False)
-
-                    self.ui.current_values = self.ui.text_widget.get(1.0, END).split()
-                    new_values = self.ui.current_values[self.ui.shift_count:]
-                    self.ui.current_values = new_values
-                    self.map_data = self.ui.current_values[start_index:end_index]
-                    mode3d.paste_data(True, self.map_data, self.row, self.col, True)
-                    if not (start_index - (self.col + self.row) < 0):
-                        self.x_axis = self.ui.current_values[start_index - self.col:start_index]
-                        self.y_axis = self.ui.current_values[start_index - (self.col + self.row):start_index - self.col]
-                        mode3d.paste_x_data(True, self.x_axis, True)
-                        mode3d.paste_y_data(True, self.y_axis, True)
-
-                    mode3d.check_all()
-
+            for i, line in enumerate(content):
+                if line.strip() == item:
+                    item_index = i
                     break
+
+            if item_index == -1:
+                return
+
+            start_index = int(content[item_index + 1])
+            end_index = int(content[item_index + 2])
+            size = content[item_index + 3].strip()
+
+            self.col, self.row = map(int, size.split('x'))
+            from Module_3D import Mode3D
+            mode3d = Mode3D(self.ui)
+
+            self.map_data = self.ui.unpacked[start_index:end_index]
+            mode3d.paste_data(True, self.map_data, self.row, self.col, False, item)
+
+            if start_index >= self.col + self.row:
+                self.x_axis = self.ui.unpacked[start_index - self.col:start_index]
+                self.y_axis = self.ui.unpacked[start_index - (self.col + self.row):start_index - self.col]
+                mode3d.paste_x_data(True, self.x_axis, False)
+                mode3d.paste_y_data(True, self.y_axis, False)
+
+            self.ui.current_values = self.ui.text_widget.get(1.0, END).split()[self.ui.shift_count:]
+            self.map_data = self.ui.current_values[start_index:end_index]
+            mode3d.paste_data(True, self.map_data, self.row, self.col, True, item)
+
+            if start_index >= self.col + self.row:
+                self.x_axis = self.ui.current_values[start_index - self.col:start_index]
+                self.y_axis = self.ui.current_values[start_index - (self.col + self.row):start_index - self.col]
+                mode3d.paste_x_data(True, self.x_axis, True)
+                mode3d.paste_y_data(True, self.y_axis, True)
+
+            mode3d.check_all()
 
     def highlight_text_map(self, start_index, end_index):
         self.ui.text_widget.tag_remove(f"{self.map_name}", 1.0, END)
@@ -207,29 +223,68 @@ class Maps_Utility:
         mode2d.draw_canvas(self.ui)
 
     def write_map(self):
+        if not os.path.exists(self.file_path):
+            return
+
         map_values = []
+        item = self.ui.map_list.get(self.last_map_index)
 
         if not self.double_click:
             return
 
+        with open(self.file_path, 'r') as file:
+            content = file.read().split('\n')
+            for i in range(len(content)):
+                if content[i] == item:
+                    self.map_factor = float(content[i + 4])
+                    self.precision = int(content[i + 5])
+                    self.x_axis_factor = float(content[i + 6])
+                    self.x_axis_precision = int(content[i + 7])
+                    self.y_axis_factor = float(content[i + 8])
+                    self.y_axis_precision = int(content[i + 9])
+
         for yi, entry in enumerate(self.ui.entry_y_widgets):
-            map_values.append(entry.get())
+            value_entry = float(entry.get().strip())
+            value_before = round(self.ui.y_values[yi])
+            if (value_entry - value_before) != 0:
+                value = value_entry
+            else:
+                value = self.ui.y_values[yi]
+            value /= self.y_axis_factor
+            value = round(value)
+            map_values.append(int(value))
 
         for xi, entry in enumerate(self.ui.entry_x_widgets[0]):
-            map_values.append(entry.get())
+            value_entry = float(entry.get().strip())
+            value_before = round(self.ui.x_values[xi])
+            if (value_entry - value_before) != 0:
+                value = value_entry
+            else:
+                value = self.ui.x_values[xi]
+            value /= self.y_axis_factor
+            value = round(value)
+            map_values.append(int(value))
 
         index_map = 0
 
         for i in range(self.ui.rows_3d):
             for j in range(self.ui.columns_3d):
+                value_entry = float(self.ui.entry_widgets[i][j].get().strip())
+                value_before = round(self.ui.map_values[index_map])
+                if (value_entry - value_before) != 0:
+                    value = value_entry
+                else:
+                    value = self.ui.map_values[index_map]
+                value /= self.map_factor
                 index_map += 1
-                map_values.append(self.ui.entry_widgets[i][j].get())
+                value = round(value)
+                map_values.append(int(value))
 
         self.ui.current_values = self.ui.text_widget.get(1.0, END).split()
 
         with open(self.file_path, 'r') as file:
             content = file.read().split('\n')
-            index = self.last_map_index * 4
+            index = self.last_map_index * 10
             start = int(content[index + 1]) + self.ui.shift_count
             end = int(content[index + 2]) + self.ui.shift_count
 
@@ -265,7 +320,7 @@ class Maps_Utility:
             self.ui.text_widget.tag_delete(tag)
         with open(self.file_path, 'r') as file:
             content = file.read().split('\n')
-            for i in range(0, len(content), 4):
+            for i in range(0, len(content), 10):
                 map_name = content[i]
                 start_index = int(content[i + 1]) + self.ui.shift_count
                 end_index = int(content[i + 2]) + self.ui.shift_count
@@ -295,17 +350,17 @@ class Maps_Utility:
                 mode3d = Mode3D(self.ui)
                 mode3d.set_default()
             item = self.ui.map_list.get(index)
+            self.reapply_highlight_text()
             with open(self.file_path, 'r') as file:
                 content = file.read().split("\n")
                 for i in range(len(content)):
                     if content[i] == item:
-                        del content[i:i + 4]
+                        del content[i:i + 10]
                         break
             with open(self.file_path, 'w') as file:
                 for i in range(len(content)):
                     file.write(f"{content[i]}\n" if i < len(content) - 1 else content[i])
             self.ui.map_list_counter -= 1
-            self.reapply_highlight_text()
             self.ui.map_list.delete(selected_index)
 
     def show_context_menu(self, event):
@@ -315,10 +370,13 @@ class Maps_Utility:
 
     def hide_context_menu(self, event):
         self.ui.remove_menu.unpost()
+        self.ui.right_click_map_menu.unpost()
+        self.ui.right_click_x_axis.unpost()
+        self.ui.right_click_y_axis.unpost()
+        self.ui.hex_address_menu.unpost()
 
     def import_map(self):
         file_path = filedialog.askopenfilename()
-
         if file_path:
             self.ui.map_list_counter = 0
             self.last_map_index = 0
@@ -327,18 +385,18 @@ class Maps_Utility:
             mode3d.set_default()
             with open(file_path, 'r') as file:
                 content = file.read().split('\n')
-                if len(content) % 4 == 0:
+                if len(content) % 10 == 0:
                     with open(self.file_path, 'w') as temp_file:
                         for i in range(len(content)):
                             temp_file.write(f"{content[i]}\n" if i < len(content) - 1 else content[i])
                         self.ui.map_list.delete(0, END)
                         self.ui.maps_names = []
                         self.first_run = False
-                    for i in range(len(content) // 4):
-                        self.map_name = content[i * 4]
-                        self.start_index = int(content[(i * 4) + 1])
-                        self.end_index = int(content[(i * 4) + 2])
-                        self.size = content[(i * 4) + 3]
+                    for i in range(len(content) // 10):
+                        self.map_name = content[i * 10]
+                        self.start_index = int(content[(i * 10) + 1])
+                        self.end_index = int(content[(i * 10) + 2])
+                        self.size = content[(i * 10) + 3]
                         self.ui.map_list.insert(self.ui.map_list_counter, self.map_name)
                         self.ui.maps_names.append(self.map_name)
                         self.highlight_text_map(self.start_index, self.end_index)
@@ -354,8 +412,7 @@ class Maps_Utility:
             messagebox.showerror("Error", "You have to create or import a mappack before you can export it!")
             return
 
-        file_path = self.linux_asksaveasfilename(initial_dir="", defaultextension=".mp", filetypes=[("Mappack Files", "*.mp")],
-                                                 initialfile="")
+        file_path = filedialog.askopenfilename()
 
         with open(self.file_path, 'r') as ori:
             content = ori.read().split('\n')
@@ -363,3 +420,14 @@ class Maps_Utility:
         with open(file_path, 'w') as file:
             for i in range(len(content)):
                 file.write(f"{content[i]}\n" if i < len(content) - 1 else content[i])
+
+    def sign_values(self):
+        from Module_3D import Mode3D
+        mode3d = Mode3D(self.ui)
+
+        if self.ui.signed_values:
+            self.ui.signed_values = False
+        else:
+            self.ui.signed_values = True
+
+        mode3d.update_3d_view()

@@ -17,6 +17,11 @@ class LinOLS:
         from Module_3D import Mode3D
         from maps import Maps_Utility
         from value_dialog_3d import Value_Dialog_3D
+        from hex_address_dialog import HexAddressDialog
+        from map_properties_window import Map_properties
+        from x_axis_properties_window import x_axis_properties
+        from y_axis_properties_window import y_axis_properties
+
         self.window = window
         window.title("LinOLS")
 
@@ -40,6 +45,10 @@ class LinOLS:
         self.mode3d = Mode3D(self)
         self.maps = Maps_Utility(self)
         self.value_dialog_3d = Value_Dialog_3D(self)
+        self.hex_address_dial = HexAddressDialog(self)
+        self.map_properties = Map_properties(self)
+        self.x_axis_properties = x_axis_properties(self)
+        self.y_axis_properties = y_axis_properties(self)
 
         self.file_path = ""
         self.columns = 20
@@ -81,6 +90,14 @@ class LinOLS:
         self.start_index_maps = []
         self.end_index_maps = []
         self.maps_names = []
+        self.signed_values = False
+        self.map_values = []
+        self.x_values = []
+        self.y_values = []
+        self.map_decimal = False
+        self.x_axis_decimal = False
+        self.y_axis_decimal = False
+        self.new_width = 0
 
         window.config(bg="#333")
 
@@ -106,13 +123,15 @@ class LinOLS:
         self.text_widget.pack(side=LEFT, fill=BOTH, expand=True)
         self.text_widget.configure(insertbackground='white', undo=True)
 
-        self.scroll_bar = Scrollbar(text_frame, command=self.text_widget.yview, bg="#333")
+        self.scroll_bar = CTkScrollbar(text_frame, command=self.text_widget.yview, fg_color="#333")
         self.scroll_bar.pack(side=RIGHT, fill=Y)
 
         self.text_widget.config(yscrollcommand=self.scroll_bar.set)
 
-        center_frame_left = CTkFrame(tab1, fg_color="#333")
-        center_frame_left.grid(row=1, column=0, pady=5)
+        self.hex_address_menu = Menu(tab1, tearoff=0, bg="#333", fg="white")
+        self.hex_address_menu.add_command(label="Copy Hex Address", command=self.text_addons.copy_hex_address)
+
+        self.text_widget.bind("<Button-3>", self.text_addons.show_hex_address_menu)
 
         center_frame = CTkFrame(tab1, fg_color="#333")
         center_frame.grid(row=1, column=0, pady=5)
@@ -129,16 +148,15 @@ class LinOLS:
         add_map_btn = CTkButton(buttons_frame, text="Add Map", width=6, hover_color="#555", fg_color="#444", text_color="white", command=self.maps.add_map)
         add_map_btn.grid(row=0, column=2, padx=5)
 
-        self.selected_count_label = CTkButton(center_frame_left, text="Selected: 0", width=100, hover_color="#555", fg_color="#444", text_color="white")
-        self.selected_count_label.grid(row=0, column=0, padx=198)
+        button_2d = CTkButton(buttons_frame, text="Text to 2D", hover_color="#555", width=6, command=lambda: self.mode2d.text_to_2d(self), fg_color="#444", text_color="white")
+        button_2d.grid(row=0, column=3, padx=5)
 
-        button_2d = CTkButton(center_frame_left, text="Text to 2D", hover_color="#555",width=100, command=lambda: self.mode2d.text_to_2d(self), fg_color="#444", text_color="white")
-        button_2d.grid(row=0, column=1, padx=200)
-
+        self.selected_count_label = CTkButton(center_frame, text="Selected: 0", width=100, hover_color="#555", fg_color="#444", text_color="white")
+        self.selected_count_label.grid(row=0, column=0, padx=10)
 
         '''COLUMNS FRAME'''
         columns_frame = CTkFrame(center_frame, border_color="#555", border_width=1, fg_color="#333")
-        columns_frame.grid(row=0, column=0, padx=5)
+        columns_frame.grid(row=0, column=1, padx=5)
 
         label_col = CTkLabel(columns_frame, text="Col:", width=3, height=2, fg_color="#333", text_color="white")
         label_col.grid(row=0, column=0, padx=5, pady=3)
@@ -152,7 +170,7 @@ class LinOLS:
 
         '''SHIFT FRAME'''
         shift_frame = CTkFrame(center_frame, border_color="#555", border_width=1, fg_color="#333")
-        shift_frame.grid(row=0, column=1, padx=5)
+        shift_frame.grid(row=0, column=2, padx=5)
 
         label_shift = CTkLabel(shift_frame, text="Shift:", width=3, height=2, fg_color="#333", text_color="white")
         label_shift.grid(row=0, column=0, padx=5, pady=3)
@@ -163,6 +181,9 @@ class LinOLS:
 
         apply_position = CTkButton(shift_frame, text="Apply", width=6, hover_color="#555", fg_color="#444", text_color="white", command=lambda: self.utility.move_items(self))
         apply_position.grid(row=0, column=2, padx=5, pady=3)
+
+        self.ori_value_label = CTkButton(center_frame, text="Ori: 00000", width=100, hover_color="#555", fg_color="#444", text_color="white")
+        self.ori_value_label.grid(row=0, column=3, padx=10)
 
         '''EDIT BUTTONS'''
         edit_buttons = CTkFrame(tab1, fg_color="#333")
@@ -198,6 +219,8 @@ class LinOLS:
         self.canvas.get_tk_widget().config(highlightthickness=0)
 
         self.canvas.mpl_connect("button_press_event", self.mode2d.on_canvas_click)
+
+        self.canvas.mpl_connect("key_press_event", self.utility.on_key_press_2d)
 
         tab2.grid_rowconfigure(0, weight=1)
         tab2.grid_columnconfigure(0, weight=1)
@@ -263,13 +286,16 @@ class LinOLS:
         self.boxes = Frame(tab3, bg="#333")
         self.boxes.grid(row=0, column=0, padx=10, pady=10, sticky='nw')
 
-        self.main_frame = Frame(self.boxes)
+        sign_btn = CTkButton(self.boxes, text="Sign", fg_color="#444", text_color="white", hover_color="#555", width=10, command=self.maps.sign_values)
+        sign_btn.grid(row=0, column=0)
+
+        self.main_frame = Frame(self.boxes, bg="#333")
         self.main_frame.grid(row=1, column=1, padx=10, sticky='nw')
 
-        self.x_frame = Frame(self.boxes)
+        self.x_frame = Frame(self.boxes, bg="#333")
         self.x_frame.grid(row=0, column=1, padx=10, pady=8, sticky='nw')
 
-        self.y_frame = Frame(self.boxes)
+        self.y_frame = Frame(self.boxes, bg="#333")
         self.y_frame.grid(row=1, column=0, sticky='nw')
 
         self.right_frame_3d = Frame(tab3, bg="#333")
@@ -296,10 +322,20 @@ class LinOLS:
             entry.bind("<ButtonRelease-1>", self.mode3d.end_interaction)
             entry.bind("<Control-a>", lambda event, j=x: self.mode3d.select_all(event, 0, j, "x"))
             entry.bind("<Tab>", self.mode3d.clear_highlight_on_tab)
+            entry.bind("<Button-3>", self.x_axis_properties.show_context_menu)
             row_x.append(entry)
             original_row_x.append("00000")
         self.entry_x_widgets.append(row_x)
         self.original_X.append(original_row_x)
+
+        self.right_click_map_menu = Menu(tab3, tearoff=0, bg="#333", fg="white")
+        self.right_click_map_menu.add_command(label="Map Properties", command=self.map_properties.map_properties_dialog)
+
+        self.right_click_x_axis = Menu(tab3, tearoff=0, bg="#333", fg="white")
+        self.right_click_x_axis.add_command(label="X-Axis Properties", command=self.x_axis_properties.x_axis_properties_dialog)
+
+        self.right_click_y_axis = Menu(tab3, tearoff=0, bg="#333", fg="white")
+        self.right_click_y_axis.add_command(label="Y-Axis Properties", command=self.y_axis_properties.y_axis_properties_dialog)
 
         self.entry_widgets = []
         self.original = []
@@ -319,6 +355,7 @@ class LinOLS:
                 entry.bind("<ButtonRelease-1>", self.mode3d.end_interaction)
                 entry.bind("<Control-a>", lambda event, i=k, j=x: self.mode3d.select_all(event, i, j, "map"))
                 entry.bind("<Tab>", self.mode3d.clear_highlight_on_tab)
+                entry.bind("<Button-3>", self.map_properties.show_context_menu)
                 row.append(entry)
                 original_row.append("00000")
             self.entry_widgets.append(row)
@@ -337,6 +374,7 @@ class LinOLS:
             entry.bind("<ButtonRelease-1>", self.mode3d.end_interaction)
             entry.bind("<Control-a>", lambda event, i=x: self.mode3d.select_all(event, i, 0, "y"))
             entry.bind("<Tab>", self.mode3d.clear_highlight_on_tab)
+            entry.bind("<Button-3>", self.y_axis_properties.show_context_menu)
             self.entry_y_widgets.append(entry)
             self.original_Y.append("00000")
 
@@ -363,35 +401,28 @@ class LinOLS:
         self.end_y = None
         self.selected_cells = set()
 
-        mid_frame_around = CTkFrame(tab3, fg_color="#333")
-        mid_frame_around.grid(row=1, column=0, columnspan=2)
-
-        self.label_diff_3d = CTkButton(mid_frame_around, text="Difference: 0", width=120, fg_color="#444", text_color="white", hover_color="#555")
-        self.label_diff_3d.grid(row=0, column=0, padx=148)
-
-        copy_map_values_button = CTkButton(mid_frame_around, text="Value Dialog", command=self.value_dialog_3d.value_dialog,
-                                                fg_color="#444", text_color="white", hover_color="#555", width=120)
-        copy_map_values_button.grid(row=0, column=1, padx=150)
-
-
         mid_frame_3d = CTkFrame(tab3, fg_color="#333")
         mid_frame_3d.grid(row=1, column=0, columnspan=2)
 
-        row_frame_3d = CTkFrame(mid_frame_3d, border_color="#555", border_width=1, fg_color="#333")
-        row_frame_3d.grid(row=0, column=0, padx=5)
+        update_3d = CTkButton(mid_frame_3d, text="Update", command=self.maps.update_3d_from_text,
+                                             fg_color="#444", text_color="white", hover_color="#555", width=80)
+        update_3d.grid(row=0, column=0)
 
-        CTkLabel(row_frame_3d, text="Row:", fg_color="#333", text_color="white").grid(row=0, column=0, padx=5, pady=3)
+        self.label_diff_3d = CTkButton(mid_frame_3d, text="Diff: 0", width=80, fg_color="#444",
+                                       text_color="white", hover_color="#555")
+        self.label_diff_3d.grid(row=0, column=1, padx=10)
+
+        row_frame_3d = CTkFrame(mid_frame_3d, border_color="#555", border_width=1, fg_color="#333")
+        row_frame_3d.grid(row=0, column=2, padx=5)
+
+        CTkLabel(row_frame_3d, text="Row:", fg_color="#333", text_color="white").grid(row=0, column=1, padx=5, pady=3)
         self.rows_entry = CTkEntry(row_frame_3d, width=28, fg_color="#555", text_color="white")
         self.rows_entry.insert(0, str(self.rows_3d))
-        self.rows_entry.grid(row=0, column=1, padx=5, pady=3)
+        self.rows_entry.grid(row=0, column=2, padx=5, pady=3)
         self.rows_entry.configure(state="disabled")
 
-        update_3d = CTkButton(mid_frame_3d, text="Update", command=self.maps.update_3d_from_text,
-                                             fg_color="#444", text_color="white", hover_color="#555", width=60)
-        update_3d.grid(row=0, column=1, padx=10)
-
         col_frame_3d = CTkFrame(mid_frame_3d, border_color="#555", border_width=1, fg_color="#333")
-        col_frame_3d.grid(row=0, column=2, padx=5)
+        col_frame_3d.grid(row=0, column=3, padx=5)
 
         CTkLabel(col_frame_3d, text="Col:", fg_color="#333", text_color="white").grid(row=0, column=0, padx=5, pady=3)
         self.columns_entry = CTkEntry(col_frame_3d, width=28, fg_color="#555", text_color="white")
@@ -399,24 +430,33 @@ class LinOLS:
         self.columns_entry.grid(row=0, column=1, padx=5, pady=3)
         self.columns_entry.configure(state="disabled")
 
+        value_dialog_3d_btn = CTkButton(mid_frame_3d, text="Value", command=self.value_dialog_3d.value_dialog,
+                                                fg_color="#444", text_color="white", hover_color="#555", width=80)
+        value_dialog_3d_btn.grid(row=0, column=4, padx=10)
+
+        update_3d_button = CTkButton(mid_frame_3d, text="Write Map", command=self.maps.write_map,
+                                       fg_color="#444", text_color="white", hover_color="#555", width=80)
+        update_3d_button.grid(row=0, column=5)
+
+
 
         left_frame_3d = CTkFrame(tab3, fg_color="#333")
         left_frame_3d.grid(row=1, column=0, pady=5, sticky=W)
 
         copy_map_values_button = CTkButton(left_frame_3d, text="Copy Map", command=self.mode3d.copy_map_values,
-                                             fg_color="#444", text_color="white", hover_color="#555", width=100)
+                                             fg_color="#444", text_color="white", hover_color="#555", width=80)
         copy_map_values_button.grid(row=0, column=0, padx=5)
 
         copy_selected_button = CTkButton(left_frame_3d, text="Copy Selected", command=self.mode3d.copy_selected_cells,
-                                           fg_color="#444", text_color="white", hover_color="#555", width=100)
+                                           fg_color="#444", text_color="white", hover_color="#555", width=80)
         copy_selected_button.grid(row=0, column=1, padx=5)
 
         self.copy_x_axis_button = CTkButton(left_frame_3d, text="Copy X Axis", command=self.mode3d.copy_x_axis,
-                                            fg_color="#444", text_color="white", hover_color="#555", width=100)
+                                            fg_color="#444", text_color="white", hover_color="#555", width=80)
         self.copy_x_axis_button.grid(row=0, column=2, padx=5)
 
         self.copy_y_axis_button = CTkButton(left_frame_3d, text="Copy Y Axis", command=self.mode3d.copy_y_axis,
-                                            fg_color="#444", text_color="white", hover_color="#555", width=100)
+                                            fg_color="#444", text_color="white", hover_color="#555", width=80)
         self.copy_y_axis_button.grid(row=0, column=3, padx=5)
 
 
@@ -424,19 +464,19 @@ class LinOLS:
         east_frame_3d.grid(row=1, column=0, columnspan=2, pady=5, sticky=SE)
 
         self.paste_x_button = CTkButton(east_frame_3d, text="Paste X Axis", command=lambda: self.mode3d.paste_x_data(False, [], False),
-                                     fg_color="#444", text_color="white", hover_color="#555", width=100)
+                                     fg_color="#444", text_color="white", hover_color="#555", width=80)
         self.paste_x_button.grid(row=0, column=0, padx=5)
 
         self.paste_y_button = CTkButton(east_frame_3d, text="Paste Y Axis", command=lambda: self.mode3d.paste_y_data(False, [], False),
-                                     fg_color="#444", text_color="white", hover_color="#555", width=100)
+                                     fg_color="#444", text_color="white", hover_color="#555", width=80)
         self.paste_y_button.grid(row=0, column=1, padx=5)
 
-        update_3d_button = CTkButton(east_frame_3d, text="Write Map", command=self.maps.write_map,
-                                       fg_color="#444", text_color="white", hover_color="#555", width=100)
-        update_3d_button.grid(row=0, column=2, padx=5)
+        paste_selected_3d_btn = CTkButton(east_frame_3d, text="Paste Selected", command=self.mode3d.paste_selected,
+                                       fg_color="#444", text_color="white", hover_color="#555", width=80)
+        paste_selected_3d_btn.grid(row=0, column=2, padx=5)
 
-        self.paste_button = CTkButton(east_frame_3d, text="Paste", hover_color="#555", width=100,
-                                    command=lambda: self.mode3d.paste_data(False, [], 0, 0, False), fg_color="#444",
+        self.paste_button = CTkButton(east_frame_3d, text="Paste Map", hover_color="#555", width=80,
+                                    command=lambda: self.mode3d.paste_data(False, [], 0, 0, False, ""), fg_color="#444",
                                    text_color="white")
         self.paste_button.grid(row=0, column=3, padx=5)
 
@@ -466,9 +506,10 @@ class LinOLS:
         options_menu = Menu(menu_bar, tearoff=0, bg="#333", fg="white")
         menu_bar.add_cascade(label="Options", menu=options_menu)
         options_menu.add_command(label="Find", command=self.find_dialog.find_dialog)
-        options_menu.add_command(label="Import", command=lambda: self.file_import.import_file(self))
+        options_menu.add_command(label="Import", command=lambda: self.file_import.import_file(self, False, ""))
         options_menu.add_command(label="Difference", command=lambda: self.diff_dialog.differences_dialog(self))
         options_menu.add_command(label="Value Changer", command=lambda event=None: self.value_dial.value_dialog(self, event))
+        options_menu.add_command(label="Find Hex Address", command=self.hex_address_dial.hex_find_dialog)
 
         mappack_menu = Menu(menu_bar, tearoff=0, bg="#333", fg="white")
         menu_bar.add_cascade(label="Mappack", menu=mappack_menu)

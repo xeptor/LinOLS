@@ -2,6 +2,7 @@ import tkinter
 from tkinter import *
 from tkinter import messagebox
 import math
+import os
 
 class TextAddons:
     def __init__(self, ui):
@@ -38,13 +39,14 @@ class TextAddons:
 
     def on_outside_click(self, event, widget, func2, func3):
         if self.ui.edit_mode_active:
-            if widget.winfo_exists() and widget is not None:
-                try:
-                    x1, y1, x2, y2 = widget.bbox("all")
-                    if not (x1 <= event.x <= x2 and y1 <= event.y <= y2):
-                        self.save_edit(event, func2, func3)
-                except tkinter.TclError:
-                    return
+            if widget is not None:
+                if widget.winfo_exists():
+                    try:
+                        x1, y1, x2, y2 = widget.bbox("all")
+                        if not (x1 <= event.x <= x2 and y1 <= event.y <= y2):
+                            self.save_edit(event, func2, func3)
+                    except tkinter.TclError:
+                        return
 
     def save_edit(self, event, start_index=None, end_index=None):
         if self.entry_widget:
@@ -114,6 +116,18 @@ class TextAddons:
         self.ui.text_widget.tag_remove(SEL, "1.0", END)
         self.ui.text_widget.tag_add(SEL, f"{sel_start}", f"{row}.{col}")
 
+        if len(selected_text.strip()) == 5:
+            text = str(sel_start)
+            parts = text.split('.')
+            row = int(parts[0]) - 1
+            col = int(parts[1]) // 6
+
+            index = row * self.ui.columns + col
+
+            self.ui.ori_value_label.configure(text=f"Ori: {self.ui.unpacked[index - self.ui.shift_count]:05}")
+        else:
+            self.ui.ori_value_label.configure(text="Ori: 00000")
+
     def on_enter(self):
         self.ui.text_widget.tag_remove(SEL, "1.0", END)
         self.ui.text_widget.tag_add(SEL, f"{self.start_row}.{self.start}", f"{self.end_row}.{self.end}")
@@ -122,6 +136,75 @@ class TextAddons:
         return 'break'
 
     def disable_user_input(self, event):
+        if (event.keysym == 'v' or event.keysym == 'V') and event.state & 0x0004:
+            file_path = self.ui.window.clipboard_get()
+            if os.path.isfile(file_path):
+                result = messagebox.askyesno("Open a new file", "Do you really want to open a new file?")
+                if result:
+                    self.ui.file_path = file_path
+                    self.ui.import_allow = True
+                    from text_view import TextView
+                    text_view_ = TextView(self.ui)
+                    text_view_.display_text(self.ui)
+
+        if (event.keysym == 'i' or event.keysym == 'I') and event.state & 0x0004:
+            file_path = self.ui.window.clipboard_get()
+            if os.path.isfile(file_path):
+                result = messagebox.askyesno("Import a new file", "Do you really want to import a new file?")
+                if result:
+                    from File_Import import FileImport
+                    file_import_ = FileImport(self.ui)
+                    file_import_.import_file(self.ui, True, file_path)
+        if event.keysym == 'k' or event.keysym == 'K':
+            from maps import Maps_Utility
+            maps = Maps_Utility(self.ui)
+            maps.add_map()
+
+        if event.keysym == 'm' or event.keysym == 'M':
+            entry_content = self.ui.entry.get()
+
+            try:
+                value = int(entry_content)
+            except ValueError:
+                return
+
+            if not (0 <= value + 1 <= 60):
+                return
+
+            self.ui.columns = value + 1
+
+            self.ui.entry.delete(0, END)
+            self.ui.entry.insert(END, f"{self.ui.columns:02}")
+
+            from Utilities import Utility
+            utility = Utility(self.ui)
+            self.ui.window.update_idletasks()
+            utility.adjust_columns(self.ui, True)
+
+        if event.keysym == 'w' or event.keysym == 'W':
+            entry_content = self.ui.entry.get()
+
+            try:
+                value = int(entry_content)
+            except ValueError:
+                return
+
+            if not (0 <= value - 1 <= 60):
+                return
+
+            self.ui.columns = value - 1
+
+            self.ui.entry.delete(0, END)
+            self.ui.entry.insert(END, f"{self.ui.columns:02}")
+
+            from Utilities import Utility
+            utility = Utility(self.ui)
+            self.ui.window.update_idletasks()
+            utility.adjust_columns(self.ui, True)
+
+        if event.keysym == "Next" or event.keysym == "Prior":
+            return
+
         return "break"
 
     def update_selected_count(self, event):
@@ -131,3 +214,24 @@ class TextAddons:
             selected_text = ""
         self.ui.selected_count = len(selected_text.split())
         self.ui.selected_count_label.configure(text=f"Selected: {self.ui.selected_count}")
+
+    def show_hex_address_menu(self, event):
+        try:
+            self.sel_start = self.ui.text_widget.index(SEL_FIRST)
+            sel_end = self.ui.text_widget.index(SEL_LAST)
+            selected_text = self.ui.text_widget.get(self.sel_start, sel_end).strip()
+        except tkinter.TclError:
+            return
+        if len(selected_text) == 5:
+            self.ui.hex_address_menu.post(event.x_root, event.y_root)
+
+    def copy_hex_address(self):
+        text = str(self.sel_start)
+        parts = text.split('.')
+        row = int(parts[0]) - 1
+        col = int(parts[1]) // 6
+
+        index = (row * self.ui.columns + col) * 2
+
+        self.ui.window.clipboard_clear()
+        self.ui.window.clipboard_append(f"{index:06X}")

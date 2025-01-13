@@ -37,6 +37,9 @@ class TextView:
                     self.ui.total_rows += 1
                 self.ui.differences = []
                 self.ui.ori_values = []
+                self.ui.clean_up()
+                self.ui.map_list.delete(0, END)
+                self.ui.map_list_counter = 0
                 self.show_all_data()
                 from Module_2D import Mode2D
                 self.mode2d = Mode2D(self)
